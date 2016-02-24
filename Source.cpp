@@ -1,7 +1,10 @@
 #include <Windows.h>
 #include <string>
+#include <initguid.h>
 #include <mmdeviceapi.h>
 #include <stdio.h>
+#include <endpointvolume.h>
+
 
 #define SAFE_RELEASE(punk)  \
               if ((punk) != NULL)  \
@@ -168,11 +171,20 @@ public:
 			currentDevice->OpenPropertyStore(
 				STGM_READ,
 				&deviceProperties);
-			PROPVARIANT *variant = NULL;
-			deviceProperties->GetValue(PKEY_AudioEndpoint_FormFactor, variant);
-			UINT formFactor = variant->uintVal;
+			PROPVARIANT variant;
+			deviceProperties->GetValue(PKEY_AudioEndpoint_FormFactor, &variant);
+			UINT formFactor = variant.uintVal;
 			if (formFactor == EndpointFormFactor::Headphones || formFactor == EndpointFormFactor::Headset) {
 				// TODO: set audio volume
+				void *argEndpointVolume = NULL;
+				currentDevice->Activate(
+					__uuidof(IAudioEndpointVolume), // instead of IDD_IAudioEndpointVolume
+					CLSCTX_ALL,
+					NULL,
+					&argEndpointVolume);
+				IAudioEndpointVolume *endpointVolume = (IAudioEndpointVolume*)argEndpointVolume;
+				endpointVolume->SetMasterVolumeLevelScalar(0.1, NULL); // set it to 10% volume, no identifier for this modification
+				endpointVolume->Release();
 			}
 
 			deviceProperties->Release();
